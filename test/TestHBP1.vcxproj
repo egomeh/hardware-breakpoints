@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{6b66d158-d5c7-43cf-9d35-e57d07834888}</ProjectGuid>
-    <RootNamespace>HardwareBreakpoints</RootNamespace>
+    <ProjectGuid>{6520fd91-1e4d-4243-85a8-932027a75943}</ProjectGuid>
+    <RootNamespace>TestHBP1</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -116,6 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,7 +140,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="HardwareBreakpoint.h" />
+    <ClCompile Include="test1.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../HardwareBreakpoints.vcxproj">
+      <Project>{6b66d158-d5c7-43cf-9d35-e57d07834888}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

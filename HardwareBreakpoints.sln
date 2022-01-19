@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HardwareBreakpoints", "HardwareBreakpoints.vcxproj", "{6B66D158-D5C7-43CF-9D35-E57D07834888}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestHBP1", "test/TestHBP1.vcxproj", "{6520FD91-1E4D-4243-85A8-932027A75943}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{6B66D158-D5C7-43CF-9D35-E57D07834888}.Release|x64.Build.0 = Release|x64
 		{6B66D158-D5C7-43CF-9D35-E57D07834888}.Release|x86.ActiveCfg = Release|Win32
 		{6B66D158-D5C7-43CF-9D35-E57D07834888}.Release|x86.Build.0 = Release|Win32
+		{6520FD91-1E4D-4243-85A8-932027A75943}.Debug|x64.ActiveCfg = Debug|x64
+		{6520FD91-1E4D-4243-85A8-932027A75943}.Debug|x64.Build.0 = Debug|x64
+		{6520FD91-1E4D-4243-85A8-932027A75943}.Debug|x86.ActiveCfg = Debug|Win32
+		{6520FD91-1E4D-4243-85A8-932027A75943}.Debug|x86.Build.0 = Debug|Win32
+		{6520FD91-1E4D-4243-85A8-932027A75943}.Release|x64.ActiveCfg = Release|x64
+		{6520FD91-1E4D-4243-85A8-932027A75943}.Release|x64.Build.0 = Release|x64
+		{6520FD91-1E4D-4243-85A8-932027A75943}.Release|x86.ActiveCfg = Release|Win32
+		{6520FD91-1E4D-4243-85A8-932027A75943}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
