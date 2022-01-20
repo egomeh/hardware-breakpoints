@@ -1,6 +1,7 @@
 #pragma once
 
 #include <windows.h>
+#include <tlhelp32.h>
 
 class HardwareBreakpoint
 {
@@ -60,26 +61,38 @@ public:
 		if (m_index == -1)
 			return false;
 
-		// reset local and global bits
-		context.Dr7 &= ~(((DWORD64)-1) & (0b11 << (m_index * 2)));
+		ForEachThreadInProcess([&](DWORD threadID)
+		{
+			CONTEXT threadContext = {};
+			threadContext.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
 
-		// reset size and condition
-		context.Dr7 &= ~(((DWORD64)-1) & (0b1111 << (16 + m_index * 4)));
+			HANDLE currentThread = OpenThread(THREAD_ALL_ACCESS, FALSE, threadID);
 
-		// set local bp bit
-		context.Dr7 |= (DWORD64)1 << (m_index * 2);
+			if (!currentThread)
+				return;
 
-		// set the condition
-		context.Dr7 |= (DWORD64)((int)condition & 0b11) << (16 + m_index * 4);
+			if (!GetThreadContext(currentThread, &threadContext))
+				return;
 
-		// set the size
-		context.Dr7 |= (DWORD64)sizeBytePattern << (18 + m_index * 4);
-		
-		// set the address register
-		*((DWORD64*)&context.Dr0 + m_index) = (DWORD64)address;
+			ClearBitsForIndex(threadContext.Dr7);
 
-		if (!SetThreadContext(thread, &context))
-			return false;
+			// set local bp bit
+			threadContext.Dr7 |= (DWORD64)1 << (m_index * 2);
+
+			// set the condition
+			threadContext.Dr7 |= (DWORD64)((int)condition & 0b11) << (16 + m_index * 4);
+
+			// set the size
+			threadContext.Dr7 |= (DWORD64)sizeBytePattern << (18 + m_index * 4);
+
+			// set the address register
+			*((DWORD64*)&threadContext.Dr0 + m_index) = (DWORD64)address;
+
+			if (!SetThreadContext(currentThread, &threadContext))
+				return;
+
+			CloseHandle(currentThread);
+		});
 
 		return true;
 	}
@@ -89,23 +102,70 @@ public:
 		if (m_index == -1)
 			return;
 
-		HANDLE thread = GetCurrentThread();
-		CONTEXT context = {};
-		context.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
+		ForEachThreadInProcess([&](DWORD threadID)
+		{
+			CONTEXT threadContext = {};
+			threadContext.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
 
-		if (!GetThreadContext(thread, &context))
-			return;
+			HANDLE currentThread = OpenThread(THREAD_ALL_ACCESS, FALSE, threadID);
 
+			if (!currentThread)
+				return;
+
+			if (!GetThreadContext(currentThread, &threadContext))
+				return;
+
+			ClearBitsForIndex(threadContext.Dr7);
+
+			if (!SetThreadContext(currentThread, &threadContext))
+				return;
+
+			CloseHandle(currentThread);
+		});
+	}
+
+	void ClearBitsForIndex(DWORD64& Dr7)
+	{
 		// reset local and global bits
-		context.Dr7 &= ~(((DWORD64)-1) & (0b11 << (m_index * 2)));
+		Dr7 &= ~(((DWORD64)-1) & (0b11L << (m_index * 2)));
 
 		// reset size and condition
-		context.Dr7 &= ~(((DWORD64)-1) & (0b1111 << (16 + m_index * 4)));
-
-		SetThreadContext(thread, &context);
+		Dr7 &= ~(((DWORD64)-1) & (0b1111 << (16 + m_index * 4)));
 	}
 
 private:
+
+	template<typename T>
+	bool ForEachThreadInProcess(T&& function)
+	{
+		DWORD currentProcessID = GetCurrentProcessId();
+
+		HANDLE snapshotHandle = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+
+		if (snapshotHandle == INVALID_HANDLE_VALUE)
+			return false;
+
+		THREADENTRY32 threadEntry;
+		threadEntry.dwSize = sizeof(threadEntry);
+
+		int counter = 0;
+
+		if (Thread32First(snapshotHandle, &threadEntry))
+		{
+			do
+			{
+				if (threadEntry.dwSize >= FIELD_OFFSET(THREADENTRY32, th32OwnerProcessID) + sizeof(threadEntry.th32OwnerProcessID))
+				{
+					if (threadEntry.th32OwnerProcessID == currentProcessID)
+						function(threadEntry.th32ThreadID);
+				}
+				threadEntry.dwSize = sizeof(threadEntry);
+			} while (Thread32Next(snapshotHandle, &threadEntry));
+		}
+
+		CloseHandle(snapshotHandle);
+		return true;
+	}
 
 	int m_index;
 };
