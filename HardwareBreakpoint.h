@@ -99,9 +99,6 @@ public:
 			CONTEXT context = {};
 			context.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
 
-			if (!thread)
-				return;
-
 			if (!GetThreadContext(thread, &context))
 				return;
 
