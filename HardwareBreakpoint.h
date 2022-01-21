@@ -38,11 +38,11 @@ public:
 		default: return false; // Invalid range to watch
 		}
 
-		HANDLE thread = GetCurrentThread();
-		CONTEXT context = {};
-		context.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
+		HANDLE currentThread = GetCurrentThread();
+		CONTEXT currentContext = {};
+		currentContext.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
 
-		if (!GetThreadContext(thread, &context))
+		if (!GetThreadContext(currentThread, &currentContext))
 			return false;
 
 		// find an unused debug register
@@ -50,7 +50,7 @@ public:
 		{
 			int mask = 0b11 << (i * 2);
 
-			if ((context.Dr7 & mask) > 0)
+			if ((currentContext.Dr7 & mask) > 0)
 				continue;
 
 			m_index = i;
@@ -61,37 +61,29 @@ public:
 		if (m_index == -1)
 			return false;
 
-		ForEachThreadInProcess([&](DWORD threadID)
+		ForEachThreadInProcess([&](HANDLE thread)
 		{
-			CONTEXT threadContext = {};
-			threadContext.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
+			CONTEXT context = {};
+			context.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
 
-			HANDLE currentThread = OpenThread(THREAD_ALL_ACCESS, FALSE, threadID);
-
-			if (!currentThread)
+			if (!GetThreadContext(thread, &context))
 				return;
 
-			if (!GetThreadContext(currentThread, &threadContext))
-				return;
-
-			ClearBitsForIndex(threadContext.Dr7);
+			ClearBitsForIndex(context.Dr7);
 
 			// set local bp bit
-			threadContext.Dr7 |= (DWORD64)1 << (m_index * 2);
+			context.Dr7 |= (DWORD64)1 << (m_index * 2);
 
 			// set the condition
-			threadContext.Dr7 |= (DWORD64)((int)condition & 0b11) << (16 + m_index * 4);
+			context.Dr7 |= (DWORD64)((int)condition & 0b11) << (16 + m_index * 4);
 
 			// set the size
-			threadContext.Dr7 |= (DWORD64)sizeBytePattern << (18 + m_index * 4);
+			context.Dr7 |= (DWORD64)sizeBytePattern << (18 + m_index * 4);
 
 			// set the address register
-			*((DWORD64*)&threadContext.Dr0 + m_index) = (DWORD64)address;
+			*((DWORD64*)&context.Dr0 + m_index) = (DWORD64)address;
 
-			if (!SetThreadContext(currentThread, &threadContext))
-				return;
-
-			CloseHandle(currentThread);
+			SetThreadContext(thread, &context);
 		});
 
 		return true;
@@ -102,25 +94,20 @@ public:
 		if (m_index == -1)
 			return;
 
-		ForEachThreadInProcess([&](DWORD threadID)
+		ForEachThreadInProcess([&](HANDLE thread)
 		{
-			CONTEXT threadContext = {};
-			threadContext.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
+			CONTEXT context = {};
+			context.ContextFlags |= CONTEXT_DEBUG_REGISTERS;
 
-			HANDLE currentThread = OpenThread(THREAD_ALL_ACCESS, FALSE, threadID);
-
-			if (!currentThread)
+			if (!thread)
 				return;
 
-			if (!GetThreadContext(currentThread, &threadContext))
+			if (!GetThreadContext(thread, &context))
 				return;
 
-			ClearBitsForIndex(threadContext.Dr7);
+			ClearBitsForIndex(context.Dr7);
 
-			if (!SetThreadContext(currentThread, &threadContext))
-				return;
-
-			CloseHandle(currentThread);
+			SetThreadContext(thread, &context);
 		});
 	}
 
@@ -157,7 +144,13 @@ private:
 				if (threadEntry.dwSize >= FIELD_OFFSET(THREADENTRY32, th32OwnerProcessID) + sizeof(threadEntry.th32OwnerProcessID))
 				{
 					if (threadEntry.th32OwnerProcessID == currentProcessID)
-						function(threadEntry.th32ThreadID);
+					{
+						HANDLE thread = OpenThread(THREAD_ALL_ACCESS, FALSE, threadEntry.th32ThreadID);
+						if (thread != NULL)
+						{
+							function(thread);
+						}
+					}
 				}
 				threadEntry.dwSize = sizeof(threadEntry);
 			} while (Thread32Next(snapshotHandle, &threadEntry));
